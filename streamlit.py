@@ -121,4 +121,4 @@ if st.button('Generate Keys'):
     st.write("p:", p)
     st.write("q:", q)
     st.write("n:", n)
-    st.write("Time taken for key generation:", key_gen_time, "seconds")
+    st.write("Time taken for key generation:",key_gen_time,"seconds")
