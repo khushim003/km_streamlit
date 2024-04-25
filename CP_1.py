@@ -96,12 +96,6 @@ def decrypt(ciphertext, private_key):
 # Streamlit interface setup
 st.title('RSA Encryption, Decryption, and Digital Signature')
 
-# Dropdown for algorithm selection
-algorithm = st.selectbox(
-    'Select the primality test algorithm:',
-    ('Miller-Rabin', 'Solovay-Strassen')
-)
-
 # Key size input
 bit_length = st.number_input('Enter the bit length for the key:', min_value=128, max_value=4096, value=1024, step=64)
 
@@ -154,4 +148,3 @@ if modify_encrypted_key_checkbox:
             st.success("Decryption succeeded! The modified encrypted key is valid.")
     else:
         st.warning("Enter the modified encrypted key.")
-
