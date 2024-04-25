@@ -2,8 +2,6 @@ import streamlit as st
 import random
 import time
 
-# RSA functions
-
 def sign(message, private_key):
     """ Sign a message using the private key. """
     d, n = private_key
@@ -67,13 +65,16 @@ def generate_prime_mr(bits):
             return p
 
 def generate_rsa_key(bit_length):
+    start_time = time.time()  # Measure start time
     e = 65537
     p = generate_prime_mr(bit_length // 2)
     q = generate_prime_mr(bit_length // 2)
     n = p * q
     phi = (p - 1) * (q - 1)
     d = modinv(e, phi)
-    return (e, n), (d, n)
+    end_time = time.time()  # Measure end time
+    time_taken = end_time - start_time  # Calculate time taken
+    return (e, n), (d, n), time_taken
 
 def encrypt(plaintext, public_key):
     e, n = public_key
@@ -89,14 +90,6 @@ def decrypt(ciphertext, private_key):
     plaintext = m.to_bytes((m.bit_length() + 7) // 8, 'big').decode('utf-8')
     return plaintext
 
-# Function to generate RSA key pair with time measurement
-def generate_rsa_key_with_time(bit_length):
-    start_time = time.time()  # Record the starting time
-    public_key, private_key = generate_rsa_key(bit_length)
-    end_time = time.time()  # Record the ending time
-    key_generation_time = end_time - start_time  # Calculate the time taken for key generation
-    return public_key, private_key, key_generation_time
-
 # Streamlit interface setup
 st.title('RSA Encryption, Decryption, and Digital Signature')
 
@@ -111,10 +104,46 @@ bit_length = st.number_input('Enter the bit length for the key:', min_value=128,
 
 # Key generation
 if st.button('Generate Keys'):
-    public_key, private_key, key_generation_time = generate_rsa_key_with_time(bit_length)
+    public_key, private_key, time_taken = generate_rsa_key(bit_length)
     st.session_state['public_key'] = public_key
     st.session_state['private_key'] = private_key
     st.write("Public Key (e, n):", public_key)
     st.write("Private Key (d, n):", private_key)
-    st.write("Time taken for key generation:", key_generation_time, "seconds")
+    st.write("Time taken to generate key:", time_taken, "seconds")
 
+# Text input for plaintext
+plaintext = st.text_input('Enter a plaintext message:')
+
+# Encryption
+if st.button('Encrypt Message') and plaintext and 'public_key' in st.session_state:
+    ciphertext = encrypt(plaintext, st.session_state['public_key'])
+    st.session_state['ciphertext'] = ciphertext
+    st.write("Encrypted message:", ciphertext)
+
+# Decryption
+if st.button('Decrypt Message') and 'ciphertext' in st.session_state and 'private_key' in st.session_state:
+    decrypted_message = decrypt(st.session_state['ciphertext'], st.session_state['private_key'])
+    st.write("Decrypted message:", decrypted_message)
+
+# Signing
+if st.button('Sign Message') and plaintext and 'private_key' in st.session_state:
+    signature = sign(plaintext, st.session_state['private_key'])
+    st.session_state['signature'] = signature
+    st.write("Signature:", signature)
+
+# Signature verification
+if st.button('Verify Signature') and plaintext and 'signature' in st.session_state and 'public_key' in st.session_state:
+    is_valid = verify(plaintext, st.session_state['signature'], st.session_state['public_key'])
+    if is_valid:
+        st.success("Signature is valid.")
+    else:
+        st.error("Signature is invalid.")
+
+# Option to modify encrypted key digits
+if st.checkbox('Modify Encrypted Key'):
+    modified_ciphertext = st.text_input('Enter modified encrypted key:')
+    st.write("Original Encrypted Key:", st.session_state.get('ciphertext', "Encrypt a message first."))
+    if modified_ciphertext != st.session_state.get('ciphertext'):
+        st.error("Decryption failed! The modified encrypted key is not valid.")
+    else:
+        st.success("Decryption succeeded! The modified encrypted key is valid.")
