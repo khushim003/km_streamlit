@@ -68,16 +68,13 @@ def generate_prime_mr(bits):
             return p
 
 def generate_rsa_key(bit_length):
-    start_time = time.time()
     e = 65537
     p = generate_prime_mr(bit_length // 2)
     q = generate_prime_mr(bit_length // 2)
     n = p * q
     phi = (p - 1) * (q - 1)
     d = modinv(e, phi)
-    end_time = time.time()
-    generation_time = end_time - start_time
-    return (e, n), (d, n), generation_time
+    return (e, n), (d, n)
 
 def encrypt(plaintext, public_key):
     e, n = public_key
@@ -106,39 +103,35 @@ algorithm = st.selectbox(
 bit_length = st.number_input('Enter the bit length for the key:', min_value=128, max_value=4096, value=1024, step=64)
 
 # Key generation
-key_generation_button = st.button('Generate Keys')
-if key_generation_button:
-    public_key, private_key, generation_time = generate_rsa_key(bit_length)
+if st.button('Generate Keys'):
+    public_key, private_key = generate_rsa_key(bit_length)
+    st.session_state['public_key'] = public_key
+    st.session_state['private_key'] = private_key
     st.write("Public Key (e, n):", public_key)
     st.write("Private Key (d, n):", private_key)
-    st.write("Key Generation Time:", generation_time, "seconds")
 
 # Text input for plaintext
 plaintext = st.text_input('Enter a plaintext message:')
 
 # Encryption
-encryption_button = st.button('Encrypt Message')
-if encryption_button and plaintext and 'public_key' in st.session_state:
+if st.button('Encrypt Message') and plaintext and 'public_key' in st.session_state:
     ciphertext = encrypt(plaintext, st.session_state['public_key'])
     st.session_state['ciphertext'] = ciphertext
     st.write("Encrypted message:", ciphertext)
 
 # Decryption
-decryption_button = st.button('Decrypt Message')
-if decryption_button and 'ciphertext' in st.session_state and 'private_key' in st.session_state:
+if st.button('Decrypt Message') and 'ciphertext' in st.session_state and 'private_key' in st.session_state:
     decrypted_message = decrypt(st.session_state['ciphertext'], st.session_state['private_key'])
     st.write("Decrypted message:", decrypted_message)
 
 # Signing
-signing_button = st.button('Sign Message')
-if signing_button and plaintext and 'private_key' in st.session_state:
+if st.button('Sign Message') and plaintext and 'private_key' in st.session_state:
     signature = sign(plaintext, st.session_state['private_key'])
     st.session_state['signature'] = signature
     st.write("Signature:", signature)
 
 # Signature verification
-verification_button = st.button('Verify Signature')
-if verification_button and plaintext and 'signature' in st.session_state and 'public_key' in st.session_state:
+if st.button('Verify Signature') and plaintext and 'signature' in st.session_state and 'public_key' in st.session_state:
     is_valid = verify(plaintext, st.session_state['signature'], st.session_state['public_key'])
     if is_valid:
         st.success("Signature is valid.")
@@ -146,14 +139,10 @@ if verification_button and plaintext and 'signature' in st.session_state and 'pu
         st.error("Signature is invalid.")
 
 # Option to modify encrypted key digits
-modify_encrypted_key_checkbox = st.checkbox('Modify Encrypted Key')
-if modify_encrypted_key_checkbox:
+if st.checkbox('Modify Encrypted Key'):
     modified_ciphertext = st.text_input('Enter modified encrypted key:')
-    if modified_ciphertext:
-        original_ciphertext = st.session_state.get('ciphertext')
-        if original_ciphertext and modified_ciphertext != original_ciphertext:
-            st.error("Decryption failed! The modified encrypted key is not valid.")
-        else:
-            st.success("Decryption succeeded! The modified encrypted key is valid.")
+    st.write("Original Encrypted Key:", st.session_state.get('ciphertext', "Encrypt a message first."))
+    if modified_ciphertext != st.session_state.get('ciphertext'):
+        st.error("Decryption failed! The modified encrypted key is not valid.")
     else:
-        st.warning("Enter the modified encrypted key.")
+        st.success("Decryption succeeded! The modified encrypted key is valid.")
