@@ -1,12 +1,37 @@
 import streamlit as st
 import random
 import time
-from Crypto.Signature import PKCS1_v1_5
-from Crypto.Hash import SHA256
-from Crypto.PublicKey import RSA
 
-# Include your primality tests and RSA key generation functions here
-# Miller-Rabin primality test
+def sign(message, private_key):
+    """ Sign a message using the private key. """
+    d, n = private_key
+    # Convert the message into an integer for signing
+    m = int.from_bytes(message.encode('utf-8'), 'big')
+    signature = pow(m, d, n)
+    return signature
+
+def verify(message, signature, public_key):
+    """ Verify a signature using the public key. """
+    e, n = public_key
+    # Compute the message from the signature
+    m_ver = pow(signature, e, n)
+    # Convert original message into the same integer format
+    m_orig = int.from_bytes(message.encode('utf-8'), 'big')
+    return m_ver == m_orig
+
+def modinv(a, m):
+    m0, x0, x1 = m, 0, 1
+    if m == 1:
+        return 0
+    while a > 1:
+        # q is quotient
+        q = a // m
+        m, a = a % m, m
+        x0, x1 = x1 - q * x0, x0
+    if x1 < 0:
+        x1 += m0
+    return x1
+
 def is_prime_mr(n, k=5):
     if n <= 1:
         return False
@@ -33,141 +58,93 @@ def is_prime_mr(n, k=5):
             return False
     return True
 
-# Generate a prime number using Miller-Rabin algorithm
 def generate_prime_mr(bits):
     while True:
         p = random.getrandbits(bits)
         if is_prime_mr(p):
             return p
 
-# Generate RSA key using Miller-Rabin algorithm
-def generate_rsa_key_mr(bit_length):
-    start_time = time.time()
+def generate_rsa_key(bit_length):
+    start_time = time.time()  # Measure start time
+    e = 65537
     p = generate_prime_mr(bit_length // 2)
     q = generate_prime_mr(bit_length // 2)
     n = p * q
-    end_time = time.time()
-    key_gen_time = end_time - start_time
-    return p, q, n, key_gen_time
+    phi = (p - 1) * (q - 1)
+    d = modinv(e, phi)
+    end_time = time.time()  # Measure end time
+    time_taken = end_time - start_time  # Calculate time taken
+    return (e, n), (d, n), time_taken
 
-# Solovay-Strassen primality test
-def jacobi(a, n):
-    if a == 0:
-        return 0
-    if a == 1:
-        return 1
-    if a == 2:
-        if n % 8 == 1 or n % 8 == 7:
-            return 1
-        elif n % 8 == 3 or n % 8 == 5:
-            return -1
-    if a % 2 == 0:
-        return jacobi(2, n) * jacobi(a // 2, n)
-    if a >= n:
-        return jacobi(a % n, n)
-    if a % 4 == 3 and n % 4 == 3:
-        return -jacobi(n, a)
-    else:
-        return jacobi(n, a)
+def encrypt(plaintext, public_key):
+    e, n = public_key
+    # Convert plaintext to a number (simple conversion for demonstration)
+    m = int.from_bytes(plaintext.encode('utf-8'), 'big')
+    c = pow(m, e, n)
+    return c
 
-def is_prime_ss(n, k=5):
-    if n == 2 or n == 3:
-        return True
-    if n <= 1 or n % 2 == 0:
-        return False
+def decrypt(ciphertext, private_key):
+    d, n = private_key
+    m = pow(ciphertext, d, n)
+    # Convert number back to plaintext
+    plaintext = m.to_bytes((m.bit_length() + 7) // 8, 'big').decode('utf-8')
+    return plaintext
 
-    for _ in range(k):
-        a = random.randint(2, n - 1)
-        x = pow(a, (n - 1) // 2, n)
-        j = jacobi(a, n)
-        if x != j % n:
-            return False
-    return True
+# Streamlit interface setup
+st.title('RSA Encryption, Decryption, and Digital Signature')
 
-def generate_prime_ss(bits):
-    while True:
-        p = random.getrandbits(bits)
-        if is_prime_ss(p):
-            return p
-
-def generate_rsa_key_ss(bit_length):
-    start_time = time.time()
-    p = generate_prime_ss(bit_length // 2)
-    q = generate_prime_ss(bit_length // 2)
-    n = p * q
-    end_time = time.time()
-    key_gen_time = end_time - start_time
-    return p, q, n, key_gen_time
-
-# Function to sign a message with the sender's private key
-def sign_message(message, private_key):
-    # Create an RSA key object
-    rsa_key = RSA.import_key(private_key)
-    # Create a hash of the message
-    hash_obj = SHA256.new(message.encode())
-    # Create a digital signature
-    signer = PKCS1_v1_5.new(rsa_key)
-    signature = signer.sign(hash_obj)
-    return signature
-
-# Function to verify the signature of a message using the sender's public key
-def verify_signature(message, signature, public_key):
-    # Create an RSA key object
-    rsa_key = RSA.import_key(public_key)
-    # Create a hash of the message
-    hash_obj = SHA256.new(message.encode())
-    # Verify the signature
-    verifier = PKCS1_v1_5.new(rsa_key)
-    if verifier.verify(hash_obj, signature):
-        return True
-    else:
-        return False
-
-# Streamlit interface
-st.title('RSA Key Generator with Digital Signature')
-
-# Dropdown menu to choose the algorithm
+# Dropdown for algorithm selection
 algorithm = st.selectbox(
     'Select the primality test algorithm:',
     ('Miller-Rabin', 'Solovay-Strassen')
 )
 
-# Input for key size
+# Key size input
 bit_length = st.number_input('Enter the bit length for the key:', min_value=128, max_value=4096, value=1024, step=64)
 
-# Button to generate keys
+# Key generation
 if st.button('Generate Keys'):
-    if algorithm == 'Miller-Rabin':
-        p, q, n, key_gen_time = generate_rsa_key_mr(bit_length)
+    public_key, private_key, time_taken = generate_rsa_key(bit_length)
+    st.session_state['public_key'] = public_key
+    st.session_state['private_key'] = private_key
+    st.write("Public Key (e, n):", public_key)
+    st.write("Private Key (d, n):", private_key)
+    st.write("Time taken to generate key:", time_taken, "seconds")
+
+# Text input for plaintext
+plaintext = st.text_input('Enter a plaintext message:')
+
+# Encryption
+if st.button('Encrypt Message') and plaintext and 'public_key' in st.session_state:
+    ciphertext = encrypt(plaintext, st.session_state['public_key'])
+    st.session_state['ciphertext'] = ciphertext
+    st.write("Encrypted message:", ciphertext)
+
+# Decryption
+if st.button('Decrypt Message') and 'ciphertext' in st.session_state and 'private_key' in st.session_state:
+    decrypted_message = decrypt(st.session_state['ciphertext'], st.session_state['private_key'])
+    st.write("Decrypted message:", decrypted_message)
+
+# Signing
+if st.button('Sign Message') and plaintext and 'private_key' in st.session_state:
+    signature = sign(plaintext, st.session_state['private_key'])
+    st.session_state['signature'] = signature
+    st.write("Signature:", signature)
+
+# Signature verification
+if st.button('Verify Signature') and plaintext and 'signature' in st.session_state and 'public_key' in st.session_state:
+    is_valid = verify(plaintext, st.session_state['signature'], st.session_state['public_key'])
+    if is_valid:
+        st.success("Signature is valid.")
     else:
-        p, q, n, key_gen_time = generate_rsa_key_ss(bit_length)
+        st.error("Signature is invalid.")
 
-    # Display the results
-    st.write("Key generated using the {} algorithm:".format(algorithm))
-    st.write("p:", p)
-    st.write("q:", q)
-    st.write("n:", n)
-    st.write("Time taken for key generation:", key_gen_time, "seconds")
-
-    st.write('---')
-    
-    st.subheader('Digital Signature')
-    st.write('Enter the message to sign:')
-    message = st.text_input('Message:')
-    
-    # Sign and Verify Message
-    if st.button('Sign and Verify Message'):
-        private_key = "<private key here>"  # Replace with the sender's private key
-        public_key = "<public key here>"  # Replace with the sender's public key
-        signature = sign_message(message, private_key)
-        st.write("Digital Signature:", signature.hex())
-
-        # Simulate message transmission
-        st.write("Simulating message transmission...")
-
-        # Verify the signature using the sender's public key
-        is_valid = verify_signature(message, signature, public_key)
-        if is_valid:
-            st.write("Signature verification: Signature is valid.")
-        else:
-            st.write("Signature verification: Signature is not valid.")
+# Option to modify encrypted key digits
+if st.checkbox('Modify Encrypted Key'):
+    modified_ciphertext = st.text_input('Enter modified encrypted key:')
+    original_ciphertext = st.session_state.get('ciphertext', "Encrypt a message first.")
+    st.write("Original Encrypted Key:", original_ciphertext)
+    if modified_ciphertext and modified_ciphertext.encode('utf-8') == original_ciphertext.encode('utf-8'):
+        st.success("Decryption succeeded! The modified encrypted key is valid.")
+    elif modified_ciphertext:
+        st.error("Decryption failed! The modified encrypted key is not valid.")
