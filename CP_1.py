@@ -1,3 +1,9 @@
+import streamlit as st
+import random
+import time
+
+# Include all previous definitions and new functions for signing and verifying
+
 def sign(message, private_key):
     """ Sign a message using the private key. """
     d, n = private_key
@@ -14,13 +20,6 @@ def verify(message, signature, public_key):
     # Convert original message into the same integer format
     m_orig = int.from_bytes(message.encode('utf-8'), 'big')
     return m_ver == m_orig
-
-
-import streamlit as st
-import random
-import time
-
-# Include all previous definitions and new functions for signing and verifying
 
 def modinv(a, m):
     m0, x0, x1 = m, 0, 1
@@ -111,10 +110,14 @@ if key_generation_button:
 plaintext = st.text_input('Enter a plaintext message:')
 
 # Encryption
-encryption_button = st.button('Encrypt Message')
-if encryption_button and plaintext and 'public_key' in locals():
-    ciphertext = encrypt(plaintext, public_key)
-    st.write("Encrypted message:", ciphertext)
+def encrypt_message(plaintext, public_key):
+    if plaintext:
+        ciphertext = encrypt(plaintext, public_key)
+        st.write("Encrypted message:", ciphertext)
+        return ciphertext
+
+if 'public_key' in locals():
+    ciphertext = encrypt_message(plaintext, public_key)
 
 # Decryption
 decryption_button = st.button('Decrypt Message')
@@ -139,7 +142,7 @@ if verification_button and plaintext and 'signature' in locals() and 'public_key
 
 # Option to modify encrypted key digits
 modify_encrypted_key_checkbox = st.checkbox('Modify Encrypted Key')
-if modify_encrypted_key_checkbox:
+if modify_encrypted_key_checkbox and 'ciphertext' in locals():
     modified_ciphertext = st.text_input('Enter modified encrypted key:')
     if modified_ciphertext:
         if modified_ciphertext != str(ciphertext):
