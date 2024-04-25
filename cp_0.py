@@ -142,6 +142,7 @@ if st.button('Verify Signature') and plaintext and 'signature' in st.session_sta
 if st.checkbox('Modify Encrypted Key'):
     modified_ciphertext = st.text_input('Enter modified encrypted key:')
     st.write("Original Encrypted Key:", st.session_state.get('ciphertext', "Encrypt a message first."))
-    st.write("Decrypted Key:", decrypt(int(modified_ciphertext), st.session_state['private_key']) if modified_ciphertext and 'private_key' in st.session_state else "No private key available.")
-
-
+    if modified_ciphertext != st.session_state.get('ciphertext'):
+        st.error("Decryption failed! The modified encrypted key is not valid.")
+    else:
+        st.success("Decryption succeeded! The modified encrypted key is valid.")
