@@ -118,28 +118,26 @@ plaintext = st.text_input('Enter a plaintext message:')
 
 # Encryption
 encryption_button = st.button('Encrypt Message')
-if encryption_button and plaintext and 'public_key' in st.session_state:
-    ciphertext = encrypt(plaintext, st.session_state['public_key'])
-    st.session_state['ciphertext'] = ciphertext
+if encryption_button and plaintext and 'public_key' in locals():
+    ciphertext = encrypt(plaintext, public_key)
     st.write("Encrypted message:", ciphertext)
 
 # Decryption
 decryption_button = st.button('Decrypt Message')
-if decryption_button and 'ciphertext' in st.session_state and 'private_key' in st.session_state:
-    decrypted_message = decrypt(st.session_state['ciphertext'], st.session_state['private_key'])
+if decryption_button and 'ciphertext' in locals() and 'private_key' in locals():
+    decrypted_message = decrypt(ciphertext, private_key)
     st.write("Decrypted message:", decrypted_message)
 
 # Signing
 signing_button = st.button('Sign Message')
-if signing_button and plaintext and 'private_key' in st.session_state:
-    signature = sign(plaintext, st.session_state['private_key'])
-    st.session_state['signature'] = signature
+if signing_button and plaintext and 'private_key' in locals():
+    signature = sign(plaintext, private_key)
     st.write("Signature:", signature)
 
 # Signature verification
 verification_button = st.button('Verify Signature')
-if verification_button and plaintext and 'signature' in st.session_state and 'public_key' in st.session_state:
-    is_valid = verify(plaintext, st.session_state['signature'], st.session_state['public_key'])
+if verification_button and plaintext and 'signature' in locals() and 'public_key' in locals():
+    is_valid = verify(plaintext, signature, public_key)
     if is_valid:
         st.success("Signature is valid.")
     else:
@@ -150,10 +148,10 @@ modify_encrypted_key_checkbox = st.checkbox('Modify Encrypted Key')
 if modify_encrypted_key_checkbox:
     modified_ciphertext = st.text_input('Enter modified encrypted key:')
     if modified_ciphertext:
-        original_ciphertext = st.session_state.get('ciphertext')
-        if original_ciphertext and modified_ciphertext != original_ciphertext:
+        if modified_ciphertext != str(ciphertext):
             st.error("Decryption failed! The modified encrypted key is not valid.")
         else:
             st.success("Decryption succeeded! The modified encrypted key is valid.")
     else:
         st.warning("Enter the modified encrypted key.")
+
