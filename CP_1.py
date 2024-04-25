@@ -142,10 +142,10 @@ if st.button('Verify Signature') and plaintext and 'signature' in st.session_sta
 # Option to modify encrypted key digits
 if st.checkbox('Modify Encrypted Key'):
     modified_ciphertext = st.text_input('Enter modified encrypted key:')
-    st.write("Original Encrypted Key:", st.session_state.get('ciphertext', "Encrypt a message first."))
-    if modified_ciphertext:
-        if modified_ciphertext != st.session_state.get('ciphertext'):
-            st.error("Decryption failed! The modified encrypted key is not valid.")
-        else:
-            st.success("Decryption succeeded! The modified encrypted key is valid.")
+    original_ciphertext = st.session_state.get('ciphertext', "Encrypt a message first.")
+    st.write("Original Encrypted Key:", original_ciphertext)
+    if modified_ciphertext and modified_ciphertext == original_ciphertext:
+        st.success("Decryption succeeded! The modified encrypted key is valid.")
+    elif modified_ciphertext:
+        st.error("Decryption failed! The modified encrypted key is not valid.")
 
