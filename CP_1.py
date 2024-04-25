@@ -1,3 +1,7 @@
+import streamlit as st
+import random
+import time
+
 def sign(message, private_key):
     """ Sign a message using the private key. """
     d, n = private_key
@@ -14,13 +18,6 @@ def verify(message, signature, public_key):
     # Convert original message into the same integer format
     m_orig = int.from_bytes(message.encode('utf-8'), 'big')
     return m_ver == m_orig
-
-
-import streamlit as st
-import random
-import time
-
-# Include all previous definitions and new functions for signing and verifying
 
 def modinv(a, m):
     m0, x0, x1 = m, 0, 1
@@ -76,22 +73,33 @@ def generate_rsa_key(bit_length):
     d = modinv(e, phi)
     return (e, n), (d, n)
 
-def encrypt(plaintext, public_key):
+def encrypt_with_time(plaintext, public_key):
     e, n = public_key
+    # Generate current timestamp as part of the plaintext
+    timestamp = str(int(time.time()))
+    plaintext_with_time = plaintext + "|" + timestamp
     # Convert plaintext to a number (simple conversion for demonstration)
-    m = int.from_bytes(plaintext.encode('utf-8'), 'big')
+    m = int.from_bytes(plaintext_with_time.encode('utf-8'), 'big')
     c = pow(m, e, n)
-    return c
+    return c, timestamp
 
-def decrypt(ciphertext, private_key):
+def decrypt_and_verify_with_time(ciphertext, private_key):
     d, n = private_key
     m = pow(ciphertext, d, n)
     # Convert number back to plaintext
-    plaintext = m.to_bytes((m.bit_length() + 7) // 8, 'big').decode('utf-8')
-    return plaintext
+    plaintext_with_time = m.to_bytes((m.bit_length() + 7) // 8, 'big').decode('utf-8')
+    # Separate the plaintext and timestamp
+    plaintext, timestamp = plaintext_with_time.split("|")
+    # Verify the timestamp
+    current_time = int(time.time())
+    if abs(current_time - int(timestamp)) > MAX_TIME_DIFFERENCE:
+        return None, False
+    else:
+        return plaintext, True
 
 # Streamlit interface setup
 st.title('RSA Encryption, Decryption, and Digital Signature')
+MAX_TIME_DIFFERENCE = 60  # Maximum time difference allowed in seconds
 
 # Dropdown for algorithm selection
 algorithm = st.selectbox(
@@ -113,36 +121,20 @@ if st.button('Generate Keys'):
 # Text input for plaintext
 plaintext = st.text_input('Enter a plaintext message:')
 
-# Encryption
-if st.button('Encrypt Message') and plaintext and 'public_key' in st.session_state:
-    ciphertext = encrypt(plaintext, st.session_state['public_key'])
+# Encryption with timestamp
+if st.button('Encrypt Message with Time') and plaintext and 'public_key' in st.session_state:
+    ciphertext, timestamp = encrypt_with_time(plaintext, st.session_state['public_key'])
     st.session_state['ciphertext'] = ciphertext
+    st.session_state['timestamp'] = timestamp
     st.write("Encrypted message:", ciphertext)
+    st.write("Timestamp:", timestamp)
 
-# Decryption
-if st.button('Decrypt Message') and 'ciphertext' in st.session_state and 'private_key' in st.session_state:
-    decrypted_message = decrypt(st.session_state['ciphertext'], st.session_state['private_key'])
-    st.write("Decrypted message:", decrypted_message)
-
-# Signing
-if st.button('Sign Message') and plaintext and 'private_key' in st.session_state:
-    signature = sign(plaintext, st.session_state['private_key'])
-    st.session_state['signature'] = signature
-    st.write("Signature:", signature)
-
-# Signature verification
-if st.button('Verify Signature') and plaintext and 'signature' in st.session_state and 'public_key' in st.session_state:
-    is_valid = verify(plaintext, st.session_state['signature'], st.session_state['public_key'])
+# Decryption and verification with timestamp
+if st.button('Decrypt and Verify Message with Time') and 'ciphertext' in st.session_state and 'private_key' in st.session_state:
+    decrypted_message, is_valid = decrypt_and_verify_with_time(st.session_state['ciphertext'], st.session_state['private_key'])
     if is_valid:
-        st.success("Signature is valid.")
+        st.write("Decrypted message:", decrypted_message)
+        st.success("Message is valid within the time limit.")
     else:
-        st.error("Signature is invalid.")
+        st.error("Message is invalid or expired.")
 
-# Option to modify encrypted key digits
-if st.checkbox('Modify Encrypted Key'):
-    modified_ciphertext = st.text_input('Enter modified encrypted key:')
-    st.write("Original Encrypted Key:", st.session_state.get('ciphertext', "Encrypt a message first."))
-    if modified_ciphertext != st.session_state.get('ciphertext'):
-        st.error("Decryption failed! The modified encrypted key is not valid.")
-    else:
-        st.success("Decryption succeeded! The modified encrypted key is valid.")
