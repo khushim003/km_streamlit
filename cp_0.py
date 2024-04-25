@@ -104,56 +104,49 @@ bit_length = st.number_input('Enter the bit length for the key:', min_value=128,
 
 # Key generation
 if st.button('Generate Keys'):
-    start_time = time.time()
     public_key, private_key = generate_rsa_key(bit_length)
-    end_time = time.time()
-    generation_time = end_time - start_time
     st.session_state['public_key'] = public_key
     st.session_state['private_key'] = private_key
     st.write("Public Key (e, n):", public_key)
     st.write("Private Key (d, n):", private_key)
-    st.write("Key Generation Time:", generation_time, "seconds")
 
 # Text input for plaintext
 plaintext = st.text_input('Enter a plaintext message:')
 
 # Encryption
 if st.button('Encrypt Message') and plaintext and 'public_key' in st.session_state:
-    start_time = time.time()
     ciphertext = encrypt(plaintext, st.session_state['public_key'])
-    end_time = time.time()
-    encryption_time = end_time - start_time
     st.session_state['ciphertext'] = ciphertext
     st.write("Encrypted message:", ciphertext)
-    st.write("Encryption Time:", encryption_time, "seconds")
 
 # Decryption
 if st.button('Decrypt Message') and 'ciphertext' in st.session_state and 'private_key' in st.session_state:
-    start_time = time.time()
     decrypted_message = decrypt(st.session_state['ciphertext'], st.session_state['private_key'])
-    end_time = time.time()
-    decryption_time = end_time - start_time
     st.write("Decrypted message:", decrypted_message)
-    st.write("Decryption Time:", decryption_time, "seconds")
 
 # Signing
 if st.button('Sign Message') and plaintext and 'private_key' in st.session_state:
-    start_time = time.time()
     signature = sign(plaintext, st.session_state['private_key'])
-    end_time = time.time()
-    signing_time = end_time - start_time
     st.session_state['signature'] = signature
     st.write("Signature:", signature)
-    st.write("Signing Time:", signing_time, "seconds")
 
 # Signature verification
 if st.button('Verify Signature') and plaintext and 'signature' in st.session_state and 'public_key' in st.session_state:
-    start_time = time.time()
     is_valid = verify(plaintext, st.session_state['signature'], st.session_state['public_key'])
-    end_time = time.time()
-    verification_time = end_time - start_time
     if is_valid:
         st.success("Signature is valid.")
     else:
         st.error("Signature is invalid.")
-    st.write("Verification Time:", verification_time, "seconds")
+
+# Option to modify encrypted key digits
+if st.checkbox('Modify Encrypted Key'):
+    if 'ciphertext' in st.session_state:
+        modified_ciphertext = st.text_input('Enter modified encrypted key:')
+        st.write("Original Encrypted Key:", st.session_state['ciphertext'])
+        if modified_ciphertext != st.session_state['ciphertext']:
+            st.error("Decryption failed! The modified encrypted key is not valid.")
+        else:
+            st.success("Decryption succeeded! The modified encrypted key is valid.")
+    else:
+        st.warning("Encrypt a message first to modify the encrypted key.")
+
